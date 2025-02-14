@@ -1,0 +1,23 @@
+
+class Session {
+    private:
+        int steps;
+        double calories;
+
+
+    public:
+        int getSteps() {
+            return steps;
+        };
+        double getCalories() {
+            return calories;
+        };
+        void setCalories(double newCalories) {
+            calories = newCalories;
+
+        }
+
+        void setSteps(int newSteps) {
+            steps = newSteps;
+        };
+    };

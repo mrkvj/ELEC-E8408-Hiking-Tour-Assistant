@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/TTGO_TWatch_Library/src",
+                "${workspaceFolder}"
+            ],
+            "defines": []
+        }
+    ],
+    "version": 4
+}
