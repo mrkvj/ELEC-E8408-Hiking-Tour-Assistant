@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .session-info {
+            margin-bottom: 20px;
+        }
+        .session-info p {
+            margin: 5px 0;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .delete-button {
+            display: block;
+            width: fit-content;
+            margin: 20px auto 0;
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Session Details</h2>
+        <div class="session-info">
+            <p><strong>Session ID:</strong> {{ session.sessionID }}</p>
+            <p><strong>Steps:</strong> {{ session.steps }}</p>
+            <p><strong>Calories:</strong> {{ session.calories }}</p>
+        </div>
+        <a href="/login/{{ user_id }}/" class="back-link">Back to Sessions</a>
+        <form action="/login/{{ user_id }}/{{ session.sessionID }}/delete" method="post" style="text-align: center;">
+            <button type="submit" class="delete-button">Delete Session</button>
+        </form>
+    </div>
+</body>
+</html>
