@@ -1,7 +1,8 @@
 from flask import Flask, render_template, jsonify, Response, request, redirect, url_for
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-import db
+#import db
+from databaseAPI import DatabaseAPI
 import hike
 
 app = Flask(__name__)
@@ -24,14 +25,16 @@ def login():
     if request.method == 'POST':
         name = request.form['Username']
         password = request.form['Password']
+        
+        db = DatabaseAPI("test.db")  # SQLite file database
+        if db.connect():
+            db.create_tables()
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
 
         # Check if user and password pair exists
-        cursor.execute("SELECT userID FROM user_info WHERE name = ? AND password = ?", (name, password))
-        user = cursor.fetchone()
-        conn.close()
+        #cursor.execute("SELECT userID FROM user_info WHERE name = ? AND password = ?", (name, password))
+        user = db.select_user_by_credentials(name,password)
+        db.disconnect()
 
         if user:
             user_id = user['userID']
@@ -53,27 +56,31 @@ def signup():
         password = request.form['Password']
         weight = int(request.form['Weight'])
         role = 'admin'  # Admin as a default for now
+        watchID = '1'
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        db = DatabaseAPI("test.db")  # SQLite file database
+        if db.connect():
+            db.create_tables()
 
-        # Check if username exists
-        cursor.execute("SELECT * FROM user_info WHERE name = ?", (name,))
-        existing_user = cursor.fetchone()
 
-        if existing_user:
-            return "Username already exists. Please choose a different username."
+            # Check if username exists
+            #cursor.execute("SELECT * FROM user_info WHERE name = ?", (name,))
+            existing_user = db.select_user_by_username(name)
 
-        # Generate user ID
-        cursor.execute("SELECT MAX(userID) FROM user_info")
-        max_id = cursor.fetchone()[0]
-        new_user_id = (max_id if max_id is not None else 0) + 1
+            if existing_user:
+                return "Username already exists. Please choose a different username."
 
-        # Insert the new user into the database
-        cursor.execute("INSERT INTO user_info (userID, password, name, role, weight) VALUES (?, ?, ?, ?, ?)",
-                       (new_user_id, password, name, role, weight))
-        conn.commit()
-        conn.close()
+            # Generate user ID
+            #cursor.execute("SELECT MAX(userID) FROM user_info")
+            max_id = db.select_max_userID()[0]
+            new_user_id = (max_id if max_id is not None else 0) + 1
+
+            # Insert the new user into the database
+            #cursor.execute("INSERT INTO user_info (userID, password, name, role, weight) VALUES (?, ?, ?, ?, ?)",
+            user_info_data = [new_user_id, name, watchID, password, role, weight]
+            db.insert_user_info(user_info_data)
+            #conn.commit()
+            db.disconnect()
 
         return redirect(url_for('user_homepage', user_id=new_user_id))
 
@@ -84,22 +91,27 @@ def signup():
 @app.route('/login/<int:user_id>/')
 def user_homepage(user_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    db = DatabaseAPI("test.db")  # SQLite file database
+    if db.connect():
+        db.create_tables()
+        #conn = get_db_connection()
+        #cursor = conn.cursor()
 
-    # Get user information
-    cursor.execute("SELECT * FROM user_info WHERE userID = ?", (user_id,))
-    user_info = cursor.fetchone()
+        # Get user information
+        #cursor.execute("SELECT * FROM user_info WHERE userID = ?", (user_id,))
+        #user_info = cursor.fetchone()
+        user_info = db.select_user_by_userID(user_id)
 
-    # User session count
-    cursor.execute("SELECT COUNT(*) as session_count FROM Session WHERE userID = ?", (user_id,))
-    session_count = cursor.fetchone()['session_count']
+        # User session count
+        #cursor.execute("SELECT COUNT(*) as session_count FROM Session WHERE userID = ?", (user_id,))
+        #cursor.fetchone()['session_count']
+        session_count = db.count_sessions_by_userID(user_id)#['session_count'] 
 
-    # List of sessions
-    cursor.execute("SELECT sessionID, steps, calories FROM Session WHERE userID = ?", (user_id,))
-    sessions = cursor.fetchall()
+        # List of sessions
+        #cursor.execute("SELECT sessionID, steps, calories FROM Session WHERE userID = ?", (user_id,))
+        sessions = db.select_sessions_by_userID(user_id)
 
-    conn.close()
+        db.disconnect()
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
 ################################################################
@@ -110,14 +122,15 @@ def user_homepage(user_id):
 @app.route('/login/<int:user_id>/<int:session_id>')
 def session_info(user_id, session_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    db = DatabaseAPI("test.db")  # SQLite file database
+    if db.connect():
+        db.create_tables()
 
     # Get session information
-    cursor.execute("SELECT * FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
-    session = cursor.fetchone()
+    #cursor.execute("SELECT * FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
+    session = db.select_session_by_sessionID_and_userID(session_id, user_id)
 
-    conn.close()
+    db.disconnect()
 
     return render_template('session.html', user_id=user_id, session=session)
 
@@ -126,13 +139,17 @@ def session_info(user_id, session_id):
 @app.route('/login/<int:user_id>/<int:session_id>/delete', methods=['POST'])
 def delete_session(user_id, session_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    #conn = get_db_connection()
+    #cursor = conn.cursor()
+    db = DatabaseAPI("test.db")  # SQLite file database
+    if db.connect():
+        db.create_tables()
 
     # Delete curernt session from the database
-    cursor.execute("DELETE FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
-    conn.commit()
-    conn.close()
+    #cursor.execute("DELETE FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
+    db.delete_session(session_id, user_id)
+    #conn.commit()
+    db.disconnect()
 
     print(f'DELETED SESSION WITH ID: {session_id}')
     return redirect(url_for('user_homepage', user_id=user_id))
