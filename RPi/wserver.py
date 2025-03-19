@@ -37,10 +37,10 @@ def login():
         db.disconnect()
 
         if user:
-            user_id = user['userID']
+            user_id = int(user[0])
             return redirect(url_for('user_homepage', user_id=user_id))
         else:
-            flash('Invalid username or password. Please try again.')
+            #flash('Invalid username or password. Please try again.')
             return redirect(url_for('login'))
 
     return render_template('login.html')
