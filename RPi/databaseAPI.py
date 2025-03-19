@@ -115,6 +115,16 @@ class DatabaseAPI:
         """Select all data from user_info."""
         query = "SELECT * FROM user_info"
         return self.fetch_all(query)
+    
+    def select_user_by_username(self, username):
+        """Fetch a user by their username."""
+        query = "SELECT * FROM user_info WHERE username = ?"
+        return self.fetch_one(query, (username,))
+
+    def select_user_by_userID(self, userID):
+        """Fetch a user by their userID."""
+        query = "SELECT * FROM user_info WHERE userID = ?"
+        return self.fetch_one(query, (userID,))
 
     def select_max_userID(self):
         """Select the max userID from user_info."""
@@ -135,6 +145,14 @@ class DatabaseAPI:
                        ORDER BY userID ASC
                    )'''
         return self.fetch_one(query, (userID,))
+
+    def select_sessions_by_userID(self, userID):
+        """get sessionID, steps, and calories for a specific userID."""
+        query = '''SELECT sessionID, steps, calories 
+                   FROM Session 
+                   WHERE userID = ?'''
+        result = self.fetch_all(query, (userID,))
+        return result  # Returns a list of tuples (sessionID, steps, calories)
 
     def select_session_by_sessionID(self, sessionID):
         """Select session data by sessionID."""
@@ -161,6 +179,14 @@ class DatabaseAPI:
                    )
                    LIMIT 1'''
         return self.fetch_one(query, (userID,))
+    
+    def count_sessions_by_userID(self, userID):
+        """Get the count of sessions for a specific userID."""
+        query = "SELECT COUNT(*) as session_count FROM Session WHERE userID = ?"
+        result = self.fetch_one(query, (userID,))
+        if result:
+            return result[0]  # Return the session count
+        return 0  # Return 0 if no result is found
 
     def update_session_steps_calories(self, steps, calories, sessionID, userID):
         """Update steps and calories in Session table."""
