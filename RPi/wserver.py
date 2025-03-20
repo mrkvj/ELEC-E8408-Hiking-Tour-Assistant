@@ -112,6 +112,9 @@ def user_homepage(user_id):
         sessions = db.select_sessions_by_userID(user_id)
 
         db.disconnect()
+        
+    keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
+    user_info = db.cast_tuple_to_dict(user_info,keys)
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
 ################################################################

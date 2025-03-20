@@ -62,6 +62,22 @@ class DatabaseAPI:
         except Error as e:
             print(f"Error fetching data: {e}")
             return None
+    
+    def cast_tuple_to_dict(self, tup, keys):
+        """
+        This method casts the contents of a tuple into a dictionary with keys from the `keys` list and
+        ensures all values are converted to strings.
+
+        :param tup: The input tuple with data.
+        :param keys: A list of keys corresponding to the tuple's elements.
+        :return: A dictionary with string values.
+        """
+        if len(tup) != len(keys):
+            raise ValueError("The length of the tuple and keys list must be the same.")
+        
+        # Create a dictionary by zipping the keys with the tuple and casting each value to a string
+        return {key: str(value) for key, value in zip(keys, tup)}
+
         
     def create_tables(self):
         """Create the necessary tables in the database."""
