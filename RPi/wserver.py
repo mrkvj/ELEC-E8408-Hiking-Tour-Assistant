@@ -10,7 +10,7 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 ################################################################
-# Chose to login or signup
+# Choose to login or signup
 @app.route('/')
 def home():
 
@@ -56,7 +56,7 @@ def signup():
         password = request.form['Password']
         weight = int(request.form['Weight'])
         role = 'admin'  # Admin as a default for now
-        watchID = '1'
+        watchID = None
 
         db = DatabaseAPI("test.db")  # SQLite file database
         if db.connect():
@@ -113,8 +113,11 @@ def user_homepage(user_id):
 
         db.disconnect()
         
-    keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
-    user_info = db.cast_tuple_to_dict(user_info,keys)
+    user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
+    user_info = db.cast_tuple_to_dict(user_info,user_keys)
+    #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
+    session_keys = ['sessionID','steps', 'calories'] 
+    sessions = [db.cast_tuple_to_dict(tup, session_keys) for tup in sessions]
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
 ################################################################
@@ -148,7 +151,7 @@ def delete_session(user_id, session_id):
     if db.connect():
         db.create_tables()
 
-    # Delete curernt session from the database
+    # Delete current session from the database
     #cursor.execute("DELETE FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
     db.delete_session(session_id, user_id)
     #conn.commit()
