@@ -1,10 +1,24 @@
 import sqlite3
 from sqlite3 import Error
+import threading
+import hike
+
+DB_FILE_NAME = "test.db"
+
+# lock object so multithreaded use of the same
 
 class DatabaseAPI:
-    def __init__(self, db_file):
+    
+    '''
+    lock: lock object so multithreaded use of the same HubDatabase object
+            is safe. sqlite3 does not allow the same cursor object to be
+            used concurrently.
+    '''          
+    lock = threading.Lock()
+    
+    def __init__(self):
         """Initialize the DatabaseAPI class with the database file."""
-        self.db_file = db_file
+        self.db_file = DB_FILE_NAME
         self.conn = None
         self.cursor = None
 
@@ -22,6 +36,7 @@ class DatabaseAPI:
     def disconnect(self):
         """Close the connection to the database."""
         if self.conn:
+            self.cursor.close()
             self.conn.close()
             print("Disconnected from the database.")
 
@@ -113,16 +128,24 @@ class DatabaseAPI:
             
     def insert_session(self, session_data):
         """Insert data into the Session table."""
-        query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
-        self.execute_query(query, session_data)
+        try:
+            self.lock.acquire()
+            query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+            self.execute_query(query, session_data)
+        finally:
+            self.lock.release()
 
 
     def insert_user_info(self, user_info_data):
         """Insert data into the user_info table."""
-        query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
-                   VALUES (?, ?, ?, ?, ?, ?)'''
-        self.execute_query(query, user_info_data)
+        try:
+            self.lock.acquire()
+            query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
+                    VALUES (?, ?, ?, ?, ?, ?)'''
+            self.execute_query(query, user_info_data)
+        finally:
+            self.lock.release()
         
         
     # SELECT Queries
@@ -141,10 +164,20 @@ class DatabaseAPI:
         """Fetch a user by their userID."""
         query = "SELECT * FROM user_info WHERE userID = ?"
         return self.fetch_one(query, (userID,))
+    
+    def select_userID_by_username(self, username):
+        """Fetch a userID by their username."""
+        query = "SELECT userID FROM user_info WHERE username = ?"
+        return self.fetch_one(query, (username,))
 
     def select_max_userID(self):
         """Select the max userID from user_info."""
         query = "SELECT MAX(userID) FROM user_info"
+        return self.fetch_one(query)
+    
+    def select_max_sessionID(self):
+        """Select the max sessionID from Session."""
+        query = "SELECT MAX(sessionID) FROM Session"
         return self.fetch_one(query)
 
     def select_user_by_credentials(self, username, password):
@@ -203,6 +236,15 @@ class DatabaseAPI:
         if result:
             return result[0]  # Return the session count
         return 0  # Return 0 if no result is found
+    
+    def count_sessions(self):
+        """Get the count of sessions for a specific userID."""
+        query = "SELECT COUNT(*) as session_count FROM Session"
+        result = self.fetch_one(query)
+        if result:
+            return result  # Return the session count
+        return 0  # Return 0 if no result is found
+    
 
     def update_session_steps_calories(self, steps, calories, sessionID, userID):
         """Update steps and calories in Session table."""
@@ -256,3 +298,28 @@ class DatabaseAPI:
                    SET distance = ?
                    WHERE sessionID = ? AND userID = ?'''
         self.execute_query(query, (distance, sessionID, userID))
+
+
+    def save_session_from_bt(self, hs: hike.HikeSession):
+        #sessions = self.get_sessions()
+        session_count = self.count_sessions()
+
+        if session_count > 0:
+            hs.id = session_count + 1
+        else:
+            hs.id = 1
+            
+        #(sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
+        session_data = [hs.sessionID, self.select_user_by_username(hs.username) , hs.start_time, None, hs.distance, hs.steps, hs.calories] 
+        try:
+            self.lock.acquire()
+            try:
+                #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
+                
+                self.insert_session(session_data)
+                
+            except sqlite3.IntegrityError:
+                print("WARNING: Session ID already exists in database! Aborting saving current session.")
+
+        finally:
+            self.lock.release()

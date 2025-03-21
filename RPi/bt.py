@@ -138,12 +138,16 @@ class HubBluetooth:
 
         # filtering because we might have a semi-column at the end of the message, right before the new-line character
         parts = list(filter(lambda p: len(p) > 0, m.split(';')))
-        assert len(parts) >= 3, f"MessageProcessingError -> The incoming message doesn't contain enough information: {m}"
+        assert len(parts) >= 5, f"MessageProcessingError -> The incoming message doesn't contain enough information: {m}"
 
         hs = hike.HikeSession()
-        hs.id     = int(parts[0])
-        hs.steps  = int(parts[1])
-        hs.km     = float(parts[2])
+        hs.userID     = parts[0]
+        hs.weight  = float(parts[1])
+        hs.start_time    = parts[2]
+        hs.steps     = int(parts[3])
+        hs.distance     = float(parts[4])
+        hs.calories     = float(parts[5])
+        hs.watchID = parts[6]
 
         def cvt_coord(c):
             sc = c.split(',')

@@ -2,10 +2,11 @@ import time
 import sqlite3
 
 import hike
-import db
+#import db
+from databaseAPI import DatabaseAPI
 import bt
 
-hubdb = db.HubDatabase()
+#hubdb = db.HubDatabase()
 hubbt = bt.HubBluetooth()
 
 def process_sessions(sessions: list[hike.HikeSession]):
@@ -17,10 +18,17 @@ def process_sessions(sessions: list[hike.HikeSession]):
     Args:
         sessions: list of `hike.HikeSession` objects to process
     """
-
-    for s in sessions:
-        s.calc_kcal()
-        hubdb.save(s)
+    db = DatabaseAPI()  # SQLite file database
+    if db.connect():
+        db.create_tables()
+        
+        for hs in sessions:
+            #s.calc_kcal()
+            #hubdb.save(s)
+            db.save_session_from_bt(hs)
+            
+        db.disconnect()
+        
 
 def main():
     print("Starting Bluetooth receiver.")

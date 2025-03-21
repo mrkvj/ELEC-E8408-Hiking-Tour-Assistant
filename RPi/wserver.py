@@ -1,9 +1,9 @@
 from flask import Flask, render_template, jsonify, Response, request, redirect, url_for
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-#import db
 from databaseAPI import DatabaseAPI
 import hike
+
 
 app = Flask(__name__)
 CORS(app)
@@ -26,7 +26,7 @@ def login():
         name = request.form['Username']
         password = request.form['Password']
         
-        db = DatabaseAPI("test.db")  # SQLite file database
+        db = DatabaseAPI()  # SQLite file database
         if db.connect():
             db.create_tables()
 
@@ -58,7 +58,7 @@ def signup():
         role = 'admin'  # Admin as a default for now
         watchID = None
 
-        db = DatabaseAPI("test.db")  # SQLite file database
+        db = DatabaseAPI()  # SQLite file database
         if db.connect():
             db.create_tables()
 
@@ -91,7 +91,7 @@ def signup():
 @app.route('/login/<int:user_id>/')
 def user_homepage(user_id):
 
-    db = DatabaseAPI("test.db")  # SQLite file database
+    db = DatabaseAPI()  # SQLite file database
     if db.connect():
         db.create_tables()
         #conn = get_db_connection()
@@ -128,7 +128,7 @@ def user_homepage(user_id):
 @app.route('/login/<int:user_id>/<int:session_id>')
 def session_info(user_id, session_id):
 
-    db = DatabaseAPI("test.db")  # SQLite file database
+    db = DatabaseAPI()  # SQLite file database
     if db.connect():
         db.create_tables()
 
@@ -147,7 +147,7 @@ def delete_session(user_id, session_id):
 
     #conn = get_db_connection()
     #cursor = conn.cursor()
-    db = DatabaseAPI("test.db")  # SQLite file database
+    db = DatabaseAPI()  # SQLite file database
     if db.connect():
         db.create_tables()
 
