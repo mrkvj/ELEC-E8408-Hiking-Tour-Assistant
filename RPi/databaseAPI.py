@@ -1,7 +1,18 @@
 import sqlite3
 from sqlite3 import Error
+import threading
+
+# lock object so multithreaded use of the same
 
 class DatabaseAPI:
+    
+    '''
+    lock: lock object so multithreaded use of the same HubDatabase object
+            is safe. sqlite3 does not allow the same cursor object to be
+            used concurrently.
+    '''          
+    lock = threading.Lock()
+    
     def __init__(self, db_file):
         """Initialize the DatabaseAPI class with the database file."""
         self.db_file = db_file
@@ -22,6 +33,7 @@ class DatabaseAPI:
     def disconnect(self):
         """Close the connection to the database."""
         if self.conn:
+            self.cursor.close()
             self.conn.close()
             print("Disconnected from the database.")
 
@@ -113,16 +125,24 @@ class DatabaseAPI:
             
     def insert_session(self, session_data):
         """Insert data into the Session table."""
-        query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
-        self.execute_query(query, session_data)
+        try:
+            self.lock.acquire()
+            query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+            self.execute_query(query, session_data)
+        finally:
+            self.lock.release()
 
 
     def insert_user_info(self, user_info_data):
         """Insert data into the user_info table."""
-        query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
-                   VALUES (?, ?, ?, ?, ?, ?)'''
-        self.execute_query(query, user_info_data)
+        try:
+            self.lock.acquire()
+            query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
+                    VALUES (?, ?, ?, ?, ?, ?)'''
+            self.execute_query(query, user_info_data)
+        finally:
+            self.lock.release()
         
         
     # SELECT Queries
