@@ -164,6 +164,11 @@ class DatabaseAPI:
         """Fetch a user by their userID."""
         query = "SELECT * FROM user_info WHERE userID = ?"
         return self.fetch_one(query, (userID,))
+    
+    def select_userID_by_username(self, username):
+        """Fetch a userID by their username."""
+        query = "SELECT userID FROM user_info WHERE username = ?"
+        return self.fetch_one(query, (username,))
 
     def select_max_userID(self):
         """Select the max userID from user_info."""
@@ -304,7 +309,8 @@ class DatabaseAPI:
         else:
             hs.id = 1
             
-        session_data = [hs.id, hs.m, hs.username, hs.watchID, hs.start_time, hs.weight]
+        #(sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
+        session_data = [hs.sessionID, self.select_user_by_username(hs.username) , hs.start_time, None, hs.distance, hs.steps, hs.calories] 
         try:
             self.lock.acquire()
             try:
