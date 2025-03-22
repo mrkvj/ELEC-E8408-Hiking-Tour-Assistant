@@ -2,13 +2,16 @@ MET_HIKING = 6
 KCAL_PER_STEP = 0.04
 
 class HikeSession:
-    username = None
+    userID = 0
+    username = ""
     sessionID = 0
     start_time = ""
+    end_time = ""
     weight = 0.0
     steps = 0
-    kcal = -1
+    calories = -1
     distance = 0
+    duration = 0.0
     watchID = ""
     coords = []
 
@@ -22,6 +25,7 @@ class HikeSession:
 def to_list(hs: HikeSession) -> list:
     return [hs.id, hs.m, hs.steps, hs.kcal]
 
+'''
 def from_list(l: list) -> HikeSession:
     hs = HikeSession()
     hs.username = l[0]
@@ -33,3 +37,4 @@ def from_list(l: list) -> HikeSession:
     hs.distance = l[6]
     hs.watchID = l[7]
     return hs
+    '''

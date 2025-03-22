@@ -128,24 +128,24 @@ class DatabaseAPI:
             
     def insert_session(self, session_data):
         """Insert data into the Session table."""
-        try:
-            self.lock.acquire()
-            query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
-            self.execute_query(query, session_data)
-        finally:
-            self.lock.release()
+        #try:
+            #self.lock.acquire()
+        query = '''INSERT INTO Session (sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+        self.execute_query(query, session_data)
+        #finally:
+            #self.lock.release()
 
 
     def insert_user_info(self, user_info_data):
         """Insert data into the user_info table."""
-        try:
-            self.lock.acquire()
-            query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
-                    VALUES (?, ?, ?, ?, ?, ?)'''
-            self.execute_query(query, user_info_data)
-        finally:
-            self.lock.release()
+        #try:
+        self.lock.acquire()
+        query = '''INSERT INTO user_info (userID, username, watchID, password, role, weight)
+                VALUES (?, ?, ?, ?, ?, ?)'''
+        self.execute_query(query, user_info_data)
+        #finally:
+        #    self.lock.release()
         
         
     # SELECT Queries
@@ -301,25 +301,20 @@ class DatabaseAPI:
 
 
     def save_session_from_bt(self, hs: hike.HikeSession):
-        #sessions = self.get_sessions()
-        session_count = self.count_sessions()
+        session_count = int(self.count_sessions()[0])
 
         if session_count > 0:
             hs.id = session_count + 1
         else:
             hs.id = 1
             
-        #(sessionID, userID, watchID, start_time, end_time, distance, steps, calories)
-        session_data = [hs.sessionID, self.select_user_by_username(hs.username) , hs.start_time, None, hs.distance, hs.steps, hs.calories] 
-        try:
-            self.lock.acquire()
-            try:
-                #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
-                
-                self.insert_session(session_data)
-                
-            except sqlite3.IntegrityError:
-                print("WARNING: Session ID already exists in database! Aborting saving current session.")
+        #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
+        session_data = [hs.sessionID, int(self.select_user_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.duration, hs.distance, hs.steps, hs.calories] 
 
-        finally:
-            self.lock.release()
+        try:
+            #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
+            
+            self.insert_session(session_data)
+            
+        except sqlite3.IntegrityError:
+            print("WARNING: Session ID already exists in database! Aborting saving current session.")
