@@ -9,4 +9,7 @@ sh run_script.sh
 3. Use CTRL+C to stop the associated processes when ready.
 
 ## How to initialize the LilyGo smartwatch
-
+1. Clone TWatch repository on Linux-based system
+2. Install VSCode and Platformio
+3. In Platformio.ini, the required libraries are presented and fetched from github.
+4. 
