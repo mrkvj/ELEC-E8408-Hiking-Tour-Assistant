@@ -136,7 +136,7 @@ def session_info(user_id, session_id):
     #cursor.execute("SELECT * FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
     session = db.select_session_by_sessionID_and_userID(session_id, user_id)
     session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
-    session = db.cast_tuple_to_dict(tup, session_keys)
+    session = db.cast_tuple_to_dict(session, session_keys)
     db.disconnect()
 
     return render_template('session.html', user_id=user_id, session=session)

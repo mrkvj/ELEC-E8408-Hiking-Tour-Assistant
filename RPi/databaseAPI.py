@@ -349,9 +349,9 @@ class DatabaseAPI:
         session_count = int(self.count_sessions()[0])
 
         if session_count > 0:
-            hs.id = session_count + 1
+            hs.sessionID = session_count + 1
         else:
-            hs.id = 1
+            hs.sessionID = 1
             
         #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)  hs.duration,
         session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.distance, hs.steps, hs.calories] 
