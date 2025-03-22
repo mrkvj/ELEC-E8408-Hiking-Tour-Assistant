@@ -12,4 +12,7 @@ sh run_script.sh
 1. Clone TWatch repository on Linux-based system
 2. Install VSCode and Platformio
 3. In Platformio.ini, the required libraries are presented and fetched from github.
-4. 
+4. At the start, the LITTLEFS complains about that it does not get enough parameters which was fixed by giving the function which caused the error an additional parameter (true)
+5. Press Upload in VSCode.
+
+
