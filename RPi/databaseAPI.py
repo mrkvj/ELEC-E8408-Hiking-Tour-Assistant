@@ -2,6 +2,7 @@ import sqlite3
 from sqlite3 import Error
 import threading
 import hike
+import datetime
 
 DB_FILE_NAME = "test.db"
 
@@ -291,8 +292,43 @@ class DatabaseAPI:
         return self.fetch_all(query)
     
     
+    def update_session_length(self, sessionID):
+        # Execute the UPDATE query
+        query = '''
+        UPDATE Session
+        SET session_length = 
+            strftime('%H:%M:%S', 
+                datetime('1970-01-01 00:00:00', 
+                '+' || (strftime('%s', end_time) - strftime('%s', start_time)) || ' seconds'))
+        WHERE sessionID = ?;
+        '''
+        # Execute the query with the sessionID parameter
+        self.execute_query(query, (sessionID,))
+        
+    def update_all_session_lengths(self, sessionID):
+        # Execute the UPDATE query
+        query = '''
+        UPDATE Session
+        SET session_length = 
+            strftime('%H:%M:%S', 
+                datetime('1970-01-01 00:00:00', 
+                '+' || (strftime('%s', end_time) - strftime('%s', start_time)) || ' seconds'))
+        WHERE start_time IS NOT NULL AND end_time IS NOT NULL;
+        '''
+        # Execute the query with the sessionID parameter
+        self.execute_query(query, (sessionID,))
     
-    
+    def select_session_length(self,sessionID):
+        # Execute the SELECT query
+        query = '''
+        SELECT session_length
+        FROM Session
+        WHERE sessionID = ?;
+        '''
+        # Execute the query with the sessionID parameter
+        session_length = self.fetch_one(query, (sessionID,))
+        return session_length
+
 
     def update_session_end_time(self, sessionID, userID, end_time):
         """Update end time for a specific session."""
@@ -317,8 +353,8 @@ class DatabaseAPI:
         else:
             hs.id = 1
             
-        #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
-        session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.duration, hs.distance, hs.steps, hs.calories] 
+        #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)  hs.duration,
+        session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.distance, hs.steps, hs.calories] 
 
         try:
             #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
