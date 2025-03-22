@@ -1,54 +1,168 @@
-#include "config.h"
+#include <config.hpp>
 
-// Check if Bluetooth configs are enabled
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
 
-// Bluetooth Serial object
 BluetoothSerial SerialBT;
+String userID;
+string watchID = "TWATCH-TTGO"; //acts as a "Serialnumber"
+String userName = "unnamed";
+#define BTN_X_MIN 80
+#define BTN_X_MAX 160
+#define BTN_Y_MAX 200
+#define BTN_Y_MIN 160 
+#define SERVICE_UUID "12345678-1234-5678-1234-57777abcdef0"
+#define CHARACTERISTIC_UUID "87654321-4321-6789-4321-quebec123456"
 
-// Watch objects
-TTGOClass *watch;
+TTGOClass *ttgo;
 TFT_eSPI *tft;
-BMA *sensor;
+PCF8563_Class *rtc;
+uint32_t interval = 0;
 
-uint32_t sessionId = 30;
-
-volatile uint8_t state;
+unsigned long last, updateTimeout;
+float mass;
 volatile bool irqBMA = false;
 volatile bool irqButton = false;
-
-bool sessionStored = false;
 bool sessionSent = false;
+bool sessionStored = false;
 
-void initHikeWatch()
+
+
+bool setDateTimeFormBLE(const char *str)
 {
-    // LittleFS
-    if(!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
-        Serial.println("LITTLEFS Mount Failed");
-        return;
-    }
+    /*
+    Parse data from BL stream
+    */
+    uint16_t year; 
+    uint8_t month,  day, hour,  min,  sec;
+    String temp, data;
+    int r1, r2;
+    if (str == NULL)return false;
 
-    // Stepcounter
-    // Configure IMU
-    // Enable BMA423 step count feature
-    // Reset steps
-    // Turn on step interrupt
+    data = str;
 
-    // Side button
+    r1 = data.indexOf(',');
+    if (r1 < 0)return false;
+    temp = data.substring(0, r1);
+    year = (uint16_t)temp.toInt();
+
+    r1 += 1;
+    r2 = data.indexOf(',', r1);
+    if (r2 < 0)return false;
+    temp = data.substring(r1, r2);
+    month = (uint16_t)temp.toInt();
+
+    r1 = r2 + 1;
+    r2 = data.indexOf(',', r1);
+    if (r2 < 0)return false;
+    temp = data.substring(r1, r2);
+    day = (uint16_t)temp.toInt();
+
+    r1 = r2 + 1;
+    r2 = data.indexOf(',', r1);
+    if (r2 < 0)return false;
+    temp = data.substring(r1, r2);
+    hour = (uint16_t)temp.toInt();
+
+    r1 = r2 + 1;
+    r2 = data.indexOf(',', r1);
+    if (r2 < 0)return false;
+    temp = data.substring(r1, r2);
+    min = (uint16_t)temp.toInt();
+
+    r1 = r2 + 1;
+    temp = data.substring(r1);
+    sec = (uint16_t)temp.toInt();
+
+    
+    Serial.printf("SET:%u/%u/%u %u:%u:%u\n", year, month, day, hour, min, sec);
+    rtc->setDateTime(year, month, day, hour, min, sec);
+
+    return true;
+}
+
+
+
+void setup() {
+    Serial.begin(115200);
+    SerialBT.begin("TTGO-Watch");
+    ttgo = TTGOClass::getWatch();
+    ttgo->begin();
+    ttgo->openBL();
+    tft = ttgo->tft;
+    tft->fillScreen(TFT_BLACK);
+    tft->setTextFont(2);
+    tft->setTextColor(TFT_WHITE, TFT_BLACK);
+    tft->drawString("testilaitos", 62, 30);
+    
+    rtc = ttgo->rtc;
+
+    
+    
+
+
+    //Side button
     pinMode(AXP202_INT, INPUT_PULLUP);
     attachInterrupt(AXP202_INT, [] {
         irqButton = true;
     }, FALLING);
 
     //!Clear IRQ unprocessed first
-    watch->power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
-    watch->power->clearIRQ();
-
-    return;
+    ttgo->power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
+    ttgo->power->clearIRQ();
+    if(!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
+        Serial.println("LittleFS Mount Failed");
+        return;
+     }
+     else{
+         Serial.println("Little FS Mounted Successfully");
+     }
+     
 }
 
+
+
+
+
+
+
+
+
+double readMassFromBL()  //Read the user name from the bluetooth serial stream
+{
+    const int maxLength = 5;  
+    char mass[maxLength + 1] = "";  
+    int index = 0;
+
+    
+    unsigned long startTime = millis();  // Record the start time
+    const unsigned long timeout = 5000; 
+    while (millis() - startTime < timeout) 
+    {
+        while (SerialBT.available())  
+        {
+            char incomingChar = SerialBT.read();  
+
+            if (incomingChar == ';')  
+            {
+                mass[index] = '\0'; 
+                
+                return atof(mass); 
+            }
+
+            if (index < maxLength - 1) 
+            {
+                mass[index++] = incomingChar;
+            }
+            startTime = millis();
+        }
+
+        delay(5);  
+    }
+    return 0.0;
+}
+    
 void sendDataBT(fs::FS &fs, const char * path)
 {
     /* Sends data via SerialBT */
@@ -60,6 +174,7 @@ void sendDataBT(fs::FS &fs, const char * path)
     Serial.println("- read from file:");
     while(file.available()){
         SerialBT.write(file.read());
+        
     }
     file.close();
 }
@@ -67,86 +182,161 @@ void sendDataBT(fs::FS &fs, const char * path)
 void sendSessionBT()
 {
     // Read session and send it via SerialBT
-    watch->tft->fillRect(0, 0, 240, 240, TFT_BLACK);
-    watch->tft->drawString("Sending session", 20, 80);
-    watch->tft->drawString("to Hub", 80, 110);
+    tft->fillRect(0, 0, 240, 240, TFT_BLACK);
+    tft->drawString("Sending session", 20, 80);
+    tft->drawString("to Hub", 80, 110);
 
     // Sending session id
-    sendDataBT(LITTLEFS, "/id.txt");
-    SerialBT.write(';');
-    // Sending steps
-    sendDataBT(LITTLEFS, "/steps.txt");
-    SerialBT.write(';');
-    // Sending distance
-    sendDataBT(LITTLEFS, "/distance.txt");
-    SerialBT.write(';');
-    // Send connection termination char
-    SerialBT.write('\n');
+    sendDataBT(LITTLEFS, "/data.txt");
+    return;
+    
 }
 
-
-void saveIdToFile(uint16_t id)
+String readTimeFromBL()  //Read the user name from the bluetooth serial stream
 {
-    char buffer[10];
-    itoa(id, buffer, 10);
-    writeFile(LITTLEFS, "/id.txt", buffer);
+    const int maxLength = 50;  
+    char time[maxLength + 1] = "";  
+    int index = 0;
+
+    tft->fillScreen(TFT_BROWN);
+    unsigned long startTime = millis();  // Record the start time
+    const unsigned long timeout = 5000; 
+    while (millis() - startTime < timeout) 
+    {
+        while (SerialBT.available()) 
+        {
+            char incomingChar = SerialBT.read();  
+
+            if (incomingChar == ';')  
+            {
+                time[index] = '\0';  // Null-terminate the string
+                return String(time);  // Convert char array to String
+            }
+
+            if (index < maxLength - 1)  // Prevent buffer overflow
+            {
+                time[index++] = incomingChar;
+            }
+            startTime = millis();
+        }
+
+        delay(5);  // Reduced delay for better responsiveness
+    }
+    return "";
 }
+
+
+String readUserFromBL()  //Read the user name from the bluetooth serial stream
+{
+    const int maxLength = 50;  
+    char userName[maxLength + 1] = "";  
+    int index = 0;
+
+    
+    unsigned long startTime = millis();  // Record the start time
+    const unsigned long timeout = 5000; 
+    while (millis() - startTime < timeout) 
+    {
+        while (SerialBT.available()) 
+        {
+            char incomingChar = SerialBT.read();  
+
+            if (incomingChar == ';')  
+            {
+                userName[index] = '\0';  // Null-terminate the string
+                return String(userName);  // Convert char array to String
+            }
+
+            if (index < maxLength - 1)  // Prevent buffer overflow
+            {
+                userName[index++] = incomingChar;
+            }
+            startTime = millis();
+        }
+
+        delay(5);  // Reduced delay for better responsiveness
+    }
+    return "";
+}
+
 
 void saveStepsToFile(uint32_t step_count)
 {
     char buffer[10];
     itoa(step_count, buffer, 10);
-    writeFile(LITTLEFS, "/steps.txt", buffer);
+    appendFile(LITTLEFS, "/data.txt", buffer);
+    appendFile(LITTLEFS, "/data.txt", ";");
 }
 
 void saveDistanceToFile(float distance)
 {
     char buffer[10];
-    itoa(distance, buffer, 10);
-    writeFile(LITTLEFS, "/distance.txt", buffer);
+    snprintf(buffer,10,"%.2f" ,distance);
+    appendFile(LITTLEFS, "/data.txt", buffer);
+    appendFile(LITTLEFS, "/data.txt", ";");
 }
 
 void deleteSession()
 {
-    deleteFile(LITTLEFS, "/id.txt");
-    deleteFile(LITTLEFS, "/distance.txt");
-    deleteFile(LITTLEFS, "/steps.txt");
-    deleteFile(LITTLEFS, "/coord.txt");
-}
+    deleteFile(LITTLEFS, "/data.txt");
 
-void setup()
-{
-    Serial.begin(115200);
-    watch = TTGOClass::getWatch();
-    watch->begin();
-    watch->openBL();
-
-    //Receive objects for easy writing
-    tft = watch->tft;
-    sensor = watch->bma;
     
-    initHikeWatch();
-
-    state = 1;
-
-    SerialBT.begin("Hiking Watch");
 }
 
+void saveUserToFile(String user, string mass) {
+    
+    appendFile(LITTLEFS, "/data.txt", user.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+    
+    appendFile(LITTLEFS, "/data.txt", mass.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+    
+}
+
+void saveIdToFile(string id) {
+    appendFile(LITTLEFS, "/data.txt", id.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+}
+
+
+void saveDurationToFileStr(string duration) {
+    appendFile(LITTLEFS, "/data.txt", duration.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+}
+void saveWatchIdToFileStr(string watchID) {
+    appendFile(LITTLEFS, "/data.txt", watchID.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+}
+void saveCaloriesToFile(string calories) {
+    
+    appendFile(LITTLEFS, "/data.txt", calories.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+    
+}
+void saveStopSessionStrToFile(string id) {
+    appendFile(LITTLEFS, "/data.txt", id.c_str());
+    appendFile(LITTLEFS, "/data.txt", ";");
+    appendFile(LITTLEFS, "/data.txt", "\n");
+}
+
+Session CreateSession();
+
+int state = 1;
 void loop()
 {
     switch (state)
     {
     case 1:
-    {
-        /* Initial stage */
-        //Basic interface
-        watch->tft->fillScreen(TFT_BLACK);
-        watch->tft->setTextFont(4);
-        watch->tft->setTextColor(TFT_WHITE, TFT_BLACK);
-        watch->tft->drawString("Hiking Watch",  45, 25, 4);
-        watch->tft->drawString("Press button", 50, 80);
-        watch->tft->drawString("to start session", 40, 110);
-
+    {   
+        tft->fillScreen(TFT_BLACK);
+        tft->setTextFont(2);
+        tft->setCursor(10,10);
+        tft->print("User: ");
+        
+        tft->print(userName);
+        tft->drawString("Hiking Watch",  45, 60, 4);
+        tft->drawString("Press button", 45, 90, 2);
+        tft->drawString("to start session", 45,110,2);
         bool exitSync = false;
 
         //Bluetooth discovery
@@ -161,17 +351,40 @@ void loop()
                     sendSessionBT();
                     sessionSent = true;
                 }
-
+                if (incomingChar =='t'){
+                    userName = readUserFromBL();
+                    state = 1;
+                    break;
+                }
+                if (incomingChar == 'm') {
+                    mass = readMassFromBL();
+                    state = 1;
+                    break;
+                }
+                if (incomingChar =='y') {
+                    String time = readTimeFromBL();
+                    bool timeSet = setDateTimeFormBLE(time.c_str());
+                    state = 1;
+                    break;
+                }
+                if (incomingChar =='u') {
+                    userID = readUserFromBL();
+                    
+                    state = 1;
+                    break;
+                }
+                
                 if (sessionSent && sessionStored) {
                     // Update timeout before blocking while
-                    updateTimeout = 0;
-                    last = millis();
+                    updateTimeout = millis();
+                    
                     while(1)
                     {
-                        updateTimeout = millis();
+                        
 
                         if (SerialBT.available())
                             incomingChar = SerialBT.read();
+                            
                         if (incomingChar == 'r')
                         {
                             Serial.println("Got an R");
@@ -183,10 +396,10 @@ void loop()
                             exitSync = true;
                             break;
                         }
-                        else if ((millis() - updateTimeout > 2000))
+                        if ((millis() - updateTimeout > 1000))
                         {
                             Serial.println("Waiting for timeout to expire");
-                            updateTimeout = millis();
+                            
                             sessionSent = false;
                             exitSync = true;
                             break;
@@ -196,37 +409,34 @@ void loop()
             }
             if (exitSync)
             {
-                delay(1000);
-                watch->tft->fillRect(0, 0, 240, 240, TFT_BLACK);
-                watch->tft->drawString("Hiking Watch",  45, 25, 4);
-                watch->tft->drawString("Press button", 50, 80);
-                watch->tft->drawString("to start session", 40, 110);
+                state = 1;
                 exitSync = false;
+                break;
+
             }
 
             /*      IRQ     */
             if (irqButton) {
                 irqButton = false;
-                watch->power->readIRQ();
+                ttgo->power->readIRQ();
                 if (state == 1)
                 {
                     state = 2;
                 }
-                watch->power->clearIRQ();
+                ttgo->power->clearIRQ();
             }
             if (state == 2) {
                 if (sessionStored)
                 {
-                    watch->tft->fillRect(0, 0, 240, 240, TFT_BLACK);
-                    watch->tft->drawString("Overwriting",  55, 100, 4);
-                    watch->tft->drawString("session", 70, 130);
-                    delay(1000);
+                    
+                    state = 2;
                 }
                 break;
             }
         }
         break;
     }
+    
     case 2:
     {
         /* Hiking session initalisation */
@@ -236,24 +446,33 @@ void loop()
     }
     case 3:
     {
+        
         /* Hiking session ongoing */
+        Session newSession = CreateSession();
+        
+        newSession.setUser(userName);
+        newSession.setMass(mass);
+        newSession.setCalories();
+        saveUserToFile(newSession.getUser(),newSession.getMass());
+        saveIdToFile(newSession.getstartingTime()); 
+        saveStepsToFile(newSession.getSteps()); 
+        saveDistanceToFile(newSession.getDistance()); // meters
+        saveDurationToFileStr(newSession.getDurationStr()); //minutes
+        saveWatchIdToFileStr(watchID);
+        saveCaloriesToFile(newSession.getCalories());
+        saveStopSessionStrToFile(newSession.getstoppingTime());
+        sessionStored = true;
+        // last to be printed has to be formatted data;\n
+        //user;weight;steps;distance(m);duration(min);watchID;calories;stoppingTime;\n
+       
+            
+    }   
+      
+        
+        
 
-        watch->tft->fillRect(0, 0, 240, 240, TFT_BLACK);
-        watch->tft->drawString("Starting hike", 45, 100);
-        delay(1000);
-        watch->tft->fillRect(0, 0, 240, 240, TFT_BLACK);
-
-        watch->tft->setCursor(45, 70);
-        watch->tft->print("Steps: 0");
-
-        watch->tft->setCursor(45, 100);
-        watch->tft->print("Dist: 0 km");
-
-        last = millis();
-        updateTimeout = 0;
-
-        //reset step-counter
-    }
+        
+    
     case 4:
     {
         //Save hiking session data
@@ -265,5 +484,6 @@ void loop()
         // Restart watch
         ESP.restart();
         break;
-    }
+    }   
+
 }

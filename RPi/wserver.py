@@ -112,7 +112,6 @@ def user_homepage(user_id):
         sessions = db.select_sessions_by_userID(user_id)
 
         db.disconnect()
-        
     user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
     user_info = db.cast_tuple_to_dict(user_info,user_keys)
     #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
