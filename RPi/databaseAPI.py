@@ -202,12 +202,12 @@ class DatabaseAPI:
         return self.fetch_one(query, (userID,))
 
     def select_sessions_by_userID(self, userID):
-        """get sessionID, steps, and calories for a specific userID."""
-        query = '''SELECT sessionID, steps, calories 
+        """get sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories for a specific userID."""
+        query = '''SELECT sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories 
                    FROM Session 
                    WHERE userID = ?'''
         result = self.fetch_all(query, (userID,))
-        return result  # Returns a list of tuples (sessionID, steps, calories)
+        return result  # Returns a list of tuples (sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
 
     def select_session_by_sessionID(self, sessionID):
         """Select session data by sessionID."""
@@ -357,9 +357,8 @@ class DatabaseAPI:
         session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.distance, hs.steps, hs.calories] 
 
         try:
-            #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
-            
             self.insert_session(session_data)
+            self.update_session_length(hs.sessionID)
             
         except sqlite3.IntegrityError:
             print("WARNING: Session ID already exists in database! Aborting saving current session.")

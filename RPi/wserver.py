@@ -116,7 +116,7 @@ def user_homepage(user_id):
     user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
     user_info = db.cast_tuple_to_dict(user_info,user_keys)
     #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
-    session_keys = ['sessionID','steps', 'calories'] 
+    session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
     sessions = [db.cast_tuple_to_dict(tup, session_keys) for tup in sessions]
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
@@ -135,7 +135,8 @@ def session_info(user_id, session_id):
     # Get session information
     #cursor.execute("SELECT * FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
     session = db.select_session_by_sessionID_and_userID(session_id, user_id)
-
+    session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
+    session = db.cast_tuple_to_dict(tup, session_keys)
     db.disconnect()
 
     return render_template('session.html', user_id=user_id, session=session)
