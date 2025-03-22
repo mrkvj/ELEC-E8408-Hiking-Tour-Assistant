@@ -292,20 +292,20 @@ class DatabaseAPI:
         return self.fetch_all(query)
     
     
-    def update_session_length(self, sessionID):
+    def update_session_length(self, end_time,  start_time, sessionID):
         # Execute the UPDATE query
         query = '''
         UPDATE Session
         SET session_length = 
             strftime('%H:%M:%S', 
                 datetime('1970-01-01 00:00:00', 
-                '+' || (strftime('%s', end_time) - strftime('%s', start_time)) || ' seconds'))
+                '+' || (strftime('%s', ?) - strftime('%s', ?)) || ' seconds'))
         WHERE sessionID = ?;
         '''
         # Execute the query with the sessionID parameter
-        self.execute_query(query, (sessionID,))
+        self.execute_query(query, (end_time, start_time, sessionID,))
         
-    def update_all_session_lengths(self, sessionID):
+    def update_all_session_lengths(self, end_time, start_time, sessionID):
         # Execute the UPDATE query
         query = '''
         UPDATE Session
@@ -313,10 +313,10 @@ class DatabaseAPI:
             strftime('%H:%M:%S', 
                 datetime('1970-01-01 00:00:00', 
                 '+' || (strftime('%s', end_time) - strftime('%s', start_time)) || ' seconds'))
-        WHERE start_time IS NOT NULL AND end_time IS NOT NULL;
+        WHERE ? IS NOT NULL AND ? IS NOT NULL;
         '''
         # Execute the query with the sessionID parameter
-        self.execute_query(query, (sessionID,))
+        self.execute_query(query, (end_time, start_time, sessionID, start_time, end_time,))
     
     def select_session_length(self,sessionID):
         # Execute the SELECT query
@@ -358,7 +358,7 @@ class DatabaseAPI:
 
         try:
             self.insert_session(session_data)
-            self.update_session_length(hs.sessionID)
+            self.update_session_length(hs.end_time, hs.start_time, hs.sessionID)
             
         except sqlite3.IntegrityError:
             print("WARNING: Session ID already exists in database! Aborting saving current session.")
