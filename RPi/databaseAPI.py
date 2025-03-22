@@ -169,6 +169,11 @@ class DatabaseAPI:
         """Fetch a userID by their username."""
         query = "SELECT userID FROM user_info WHERE username = ?"
         return self.fetch_one(query, (username,))
+    
+    def select_userinfo_by_watchID(self, watchID):
+        """Fetch a userinfo by their watchID."""
+        query = "SELECT userID, username, weight FROM user_info WHERE watchID = ?"
+        return self.fetch_one(query, (watchID,))
 
     def select_max_userID(self):
         """Select the max userID from user_info."""
@@ -284,6 +289,10 @@ class DatabaseAPI:
                           strftime('%H:%M:%S', end_time) - strftime('%H:%M:%S', start_time) AS session_length
                    FROM Session'''
         return self.fetch_all(query)
+    
+    
+    
+    
 
     def update_session_end_time(self, sessionID, userID, end_time):
         """Update end time for a specific session."""
@@ -309,7 +318,7 @@ class DatabaseAPI:
             hs.id = 1
             
         #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
-        session_data = [hs.sessionID, int(self.select_user_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.duration, hs.distance, hs.steps, hs.calories] 
+        session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.duration, hs.distance, hs.steps, hs.calories] 
 
         try:
             #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
