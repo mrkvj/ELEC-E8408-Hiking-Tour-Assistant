@@ -25,6 +25,7 @@ def process_sessions(sessions: list[hike.HikeSession]):
         for hs in sessions:
             #s.calc_kcal()
             #hubdb.save(s)
+            hs.calc_kcal()
             db.save_session_from_bt(hs)
             
         db.disconnect()
