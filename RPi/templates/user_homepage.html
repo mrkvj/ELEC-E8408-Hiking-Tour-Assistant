@@ -65,8 +65,13 @@
                 <li class="session-item">
                     <a href="/login/{{ user_id }}/{{ session.sessionID }}">
                         Session ID: {{ session.sessionID }}<br>
+                        Start time ID: {{session.start_time}}<br>
+                        End time ID: {{session.end_time}}<br>
+                        Session length: {{session.session_length}}<br>
+                        Session distance: {{session.distance}}<br>
                         Steps: {{ session.steps }}<br>
                         Calories: {{ session.calories }}
+                        
                     </a>
                 </li>
             {% endfor %}
