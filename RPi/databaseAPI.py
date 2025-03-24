@@ -244,7 +244,7 @@ class DatabaseAPI:
         return 0  # Return 0 if no result is found
     
     def count_sessions(self):
-        """Get the count of sessions for a specific userID."""
+        """Gets the count of sessions"""
         query = "SELECT COUNT(*) as session_count FROM Session"
         result = self.fetch_one(query)
         if result:
@@ -278,7 +278,7 @@ class DatabaseAPI:
                    WHERE sessionID = ? AND userID = ?'''
         self.execute_query(query, (sessionID, userID))
 
-    def update_session_length(self):
+    def update_session_length1(self):
         """Update session length in the Session table."""
         query = '''UPDATE Session
                    SET session_length = strftime('%H:%M:%S', end_time) - strftime('%H:%M:%S', start_time)'''
@@ -292,7 +292,7 @@ class DatabaseAPI:
         return self.fetch_all(query)
     
     
-    def update_session_length(self, end_time,  start_time, sessionID):
+    def update_session_length2(self, end_time,  start_time, sessionID):
         # Execute the UPDATE query
         query = '''
         UPDATE Session
@@ -358,7 +358,7 @@ class DatabaseAPI:
 
         try:
             self.insert_session(session_data)
-            self.update_session_length(hs.end_time, hs.start_time, hs.sessionID)
+            self.update_session_length2(hs.end_time, hs.start_time, hs.sessionID)
             
         except sqlite3.IntegrityError:
             print("WARNING: Session ID already exists in database! Aborting saving current session.")
