@@ -4,7 +4,7 @@ import threading
 import hike
 import datetime
 
-DB_FILE_NAME = "test.db"
+DB_FILE_NAME = "database.db"
 
 # lock object so multithreaded use of the same
 
