@@ -2,11 +2,9 @@ import time
 import sqlite3
 
 import hike
-#import db
 from databaseAPI import DatabaseAPI
 import bt
 
-#hubdb = db.HubDatabase()
 hubbt = bt.HubBluetooth()
 
 def process_sessions(sessions: list[hike.HikeSession]):
@@ -23,8 +21,6 @@ def process_sessions(sessions: list[hike.HikeSession]):
         db.create_tables()
         
         for hs in sessions:
-            #s.calc_kcal()
-            #hubdb.save(s)
             hs.calc_kcal()
             db.save_session_from_bt(hs)
             
