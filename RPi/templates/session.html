@@ -60,12 +60,13 @@
         <h2>Session Details</h2>
         <div class="session-info">
             <p><strong>Session ID:</strong> {{ session.sessionID }}</p>
+            <p><strong>watch ID:</strong> {{ session.watchID }}</p>
             <p><strong>Start Time:</strong> {{ session.start_time }}</p>
             <p><strong>End Time:</strong> {{ session.end_time }}</p>
-            <p><strong>Duration:</strong> {{ session.length }}</p>
+            <!--<p><strong>Duration:</strong> {{ session.length }}</p>-->
             <p><strong>Distance:</strong> {{ session.distance }}</p>
             <p><strong>Steps:</strong> {{ session.steps }}</p>
-            <p><strong>Calories:</strong> {{ session.calories }}</p>
+            <p><strong>Kcal:</strong> {{ session.calories }}</p>
         </div>
         <a href="/login/{{ user_id }}/" class="back-link">Back to Sessions</a>
         <form action="/login/{{ user_id }}/{{ session.sessionID }}/delete" method="post" style="text-align: center;">

@@ -2,8 +2,9 @@ import sqlite3
 from sqlite3 import Error
 import threading
 import hike
+import datetime
 
-DB_FILE_NAME = "test.db"
+DB_FILE_NAME = "database.db"
 
 # lock object so multithreaded use of the same
 
@@ -169,6 +170,11 @@ class DatabaseAPI:
         """Fetch a userID by their username."""
         query = "SELECT userID FROM user_info WHERE username = ?"
         return self.fetch_one(query, (username,))
+    
+    def select_userinfo_by_watchID(self, watchID):
+        """Fetch a userinfo by their watchID."""
+        query = "SELECT userID, username, weight FROM user_info WHERE watchID = ?"
+        return self.fetch_one(query, (watchID,))
 
     def select_max_userID(self):
         """Select the max userID from user_info."""
@@ -196,12 +202,12 @@ class DatabaseAPI:
         return self.fetch_one(query, (userID,))
 
     def select_sessions_by_userID(self, userID):
-        """get sessionID, steps, and calories for a specific userID."""
-        query = '''SELECT sessionID, steps, calories 
+        """get sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories for a specific userID."""
+        query = '''SELECT sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories 
                    FROM Session 
                    WHERE userID = ?'''
         result = self.fetch_all(query, (userID,))
-        return result  # Returns a list of tuples (sessionID, steps, calories)
+        return result  # Returns a list of tuples (sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
 
     def select_session_by_sessionID(self, sessionID):
         """Select session data by sessionID."""
@@ -238,7 +244,7 @@ class DatabaseAPI:
         return 0  # Return 0 if no result is found
     
     def count_sessions(self):
-        """Get the count of sessions for a specific userID."""
+        """Gets the count of sessions"""
         query = "SELECT COUNT(*) as session_count FROM Session"
         result = self.fetch_one(query)
         if result:
@@ -272,7 +278,7 @@ class DatabaseAPI:
                    WHERE sessionID = ? AND userID = ?'''
         self.execute_query(query, (sessionID, userID))
 
-    def update_session_length(self):
+    def update_session_length1(self):
         """Update session length in the Session table."""
         query = '''UPDATE Session
                    SET session_length = strftime('%H:%M:%S', end_time) - strftime('%H:%M:%S', start_time)'''
@@ -284,6 +290,45 @@ class DatabaseAPI:
                           strftime('%H:%M:%S', end_time) - strftime('%H:%M:%S', start_time) AS session_length
                    FROM Session'''
         return self.fetch_all(query)
+    
+    
+    def update_session_length2(self, end_time,  start_time, sessionID):
+        # Execute the UPDATE query
+        query = '''
+        UPDATE Session
+        SET session_length = 
+            strftime('%H:%M:%S', 
+                datetime('1970-01-01 00:00:00', 
+                '+' || (strftime('%s', ?) - strftime('%s', ?)) || ' seconds'))
+        WHERE sessionID = ?;
+        '''
+        # Execute the query with the sessionID parameter
+        self.execute_query(query, (end_time, start_time, sessionID,))
+        
+    def update_all_session_lengths(self, end_time, start_time, sessionID):
+        # Execute the UPDATE query
+        query = '''
+        UPDATE Session
+        SET session_length = 
+            strftime('%H:%M:%S', 
+                datetime('1970-01-01 00:00:00', 
+                '+' || (strftime('%s', end_time) - strftime('%s', start_time)) || ' seconds'))
+        WHERE ? IS NOT NULL AND ? IS NOT NULL;
+        '''
+        # Execute the query with the sessionID parameter
+        self.execute_query(query, (end_time, start_time, sessionID, start_time, end_time,))
+    
+    def select_session_length(self,sessionID):
+        # Execute the SELECT query
+        query = '''
+        SELECT session_length
+        FROM Session
+        WHERE sessionID = ?;
+        '''
+        # Execute the query with the sessionID parameter
+        session_length = self.fetch_one(query, (sessionID,))
+        return session_length
+
 
     def update_session_end_time(self, sessionID, userID, end_time):
         """Update end time for a specific session."""
@@ -304,17 +349,16 @@ class DatabaseAPI:
         session_count = int(self.count_sessions()[0])
 
         if session_count > 0:
-            hs.id = session_count + 1
+            hs.sessionID = session_count + 1
         else:
-            hs.id = 1
+            hs.sessionID = 1
             
-        #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)
-        session_data = [hs.sessionID, int(self.select_user_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.duration, hs.distance, hs.steps, hs.calories] 
+        #(sessionID, userID, watchID, start_time, end_time, session_length, distance, steps, calories)  hs.duration,
+        session_data = [hs.sessionID, int(self.select_userID_by_username(hs.username)[0]), hs.watchID , hs.start_time, hs.end_time, hs.distance, hs.steps, hs.calories] 
 
         try:
-            #self.cur.execute(f"INSERT INTO {DB_SESSION_TABLE['name']} VALUES ({s.id}, {s.km}, {s.steps}, {s.kcal})")
-            
             self.insert_session(session_data)
+            self.update_session_length2(hs.end_time, hs.start_time, hs.sessionID)
             
         except sqlite3.IntegrityError:
             print("WARNING: Session ID already exists in database! Aborting saving current session.")

@@ -31,7 +31,6 @@ def login():
 
 
         # Check if user and password pair exists
-        #cursor.execute("SELECT userID FROM user_info WHERE name = ? AND password = ?", (name, password))
         user = db.select_user_by_credentials(name,password)
         db.disconnect()
 
@@ -53,7 +52,7 @@ def signup():
         name = request.form['Name']
         password = request.form['Password']
         weight = int(request.form['Weight'])
-        role = 'admin'  # Admin as a default for now
+        role = 'user'  # user as a default for now
         watchID = None
 
         db = DatabaseAPI()  # SQLite file database
@@ -62,22 +61,18 @@ def signup():
 
 
             # Check if username exists
-            #cursor.execute("SELECT * FROM user_info WHERE name = ?", (name,))
             existing_user = db.select_user_by_username(name)
 
             if existing_user:
                 return "Username already exists. Please choose a different username."
 
             # Generate user ID
-            #cursor.execute("SELECT MAX(userID) FROM user_info")
             max_id = db.select_max_userID()[0]
             new_user_id = (max_id if max_id is not None else 0) + 1
 
             # Insert the new user into the database
-            #cursor.execute("INSERT INTO user_info (userID, password, name, role, weight) VALUES (?, ?, ?, ?, ?)",
             user_info_data = [new_user_id, name, watchID, password, role, weight]
             db.insert_user_info(user_info_data)
-            #conn.commit()
             db.disconnect()
 
         return redirect(url_for('user_homepage', user_id=new_user_id))
@@ -91,27 +86,25 @@ def user_homepage(user_id):
     db = DatabaseAPI()  # SQLite file database
     if db.connect():
         db.create_tables()
-        #conn = get_db_connection()
-        #cursor = conn.cursor()
 
         # Get user information
-        #cursor.execute("SELECT * FROM user_info WHERE userID = ?", (user_id,))
-        #user_info = cursor.fetchone()
         user_info = db.select_user_by_userID(user_id)
 
         # User session count
-        #cursor.execute("SELECT COUNT(*) as session_count FROM Session WHERE userID = ?", (user_id,))
-        #cursor.fetchone()['session_count']
         session_count = db.count_sessions_by_userID(user_id)#['session_count'] 
 
         # List of sessions
-        #cursor.execute("SELECT sessionID, steps, calories FROM Session WHERE userID = ?", (user_id,))
         sessions = db.select_sessions_by_userID(user_id)
 
         db.disconnect()
     user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
     user_info = db.cast_tuple_to_dict(user_info,user_keys)
+<<<<<<< HEAD
     session_keys = ['sessionID','start_time' , 'end_time', 'session_length', 'distance', 'steps', 'calories'] 
+=======
+    #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
+    session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
+>>>>>>> origin/main
     sessions = [db.cast_tuple_to_dict(tup, session_keys) for tup in sessions]
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
@@ -126,13 +119,9 @@ def session_info(user_id, session_id):
         db.create_tables()
 
     # Get session information
-    #cursor.execute("SELECT * FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
     session = db.select_session_by_sessionID_and_userID(session_id, user_id)
-
-    session_keys = ['sessionID','start_time' , 'end_time', 'session_length', 'distance', 'steps', 'calories'] 
+    session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
     session = db.cast_tuple_to_dict(session, session_keys)
-
-
     db.disconnect()
 
     return render_template('session.html', user_id=user_id, session=session)
@@ -142,16 +131,12 @@ def session_info(user_id, session_id):
 def delete_session(user_id, session_id):
     ''' Backend for deleting a session '''
 
-    #conn = get_db_connection()
-    #cursor = conn.cursor()
     db = DatabaseAPI()  # SQLite file database
     if db.connect():
         db.create_tables()
 
     # Delete current session from the database
-    #cursor.execute("DELETE FROM Session WHERE sessionID = ? AND userID = ?", (session_id, user_id))
     db.delete_session(session_id, user_id)
-    #conn.commit()
     db.disconnect()
 
     print(f'DELETED SESSION WITH ID: {session_id}')
