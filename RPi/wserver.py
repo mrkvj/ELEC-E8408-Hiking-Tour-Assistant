@@ -9,18 +9,17 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-################################################################
-# Choose to login or signup
+
 @app.route('/')
 def home():
+    ''' Choose to login or signup '''
 
     return render_template('home.html')
-################################################################
 
-################################################################
-# Login option for existing users
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    ''' Login option for existing users '''
 
     if request.method == 'POST':
         name = request.form['Username']
@@ -44,12 +43,11 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
-################################################################
 
-################################################################
-# Signup page for new users
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    ''' Signup page for new users '''
 
     if request.method == 'POST':
         name = request.form['Name']
@@ -86,10 +84,9 @@ def signup():
 
     return render_template('signup.html')
 
-################################################################
-# Backend for user homepage
 @app.route('/login/<int:user_id>/')
 def user_homepage(user_id):
+''' Backend for user homepage '''
 
     db = DatabaseAPI()  # SQLite file database
     if db.connect():
@@ -114,18 +111,15 @@ def user_homepage(user_id):
         db.disconnect()
     user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
     user_info = db.cast_tuple_to_dict(user_info,user_keys)
-    #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
     session_keys = ['sessionID','start_time' , 'end_time', 'session_length', 'distance', 'steps', 'calories'] 
     sessions = [db.cast_tuple_to_dict(tup, session_keys) for tup in sessions]
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
-################################################################
 
 
-################################################################
-# Backend for session info page
 @app.route('/login/<int:user_id>/<int:session_id>')
 def session_info(user_id, session_id):
+    ''' Backend for session info page '''
 
     db = DatabaseAPI()  # SQLite file database
     if db.connect():
@@ -143,10 +137,10 @@ def session_info(user_id, session_id):
 
     return render_template('session.html', user_id=user_id, session=session)
 
-################################################################
-# Backend for deleting a session
+
 @app.route('/login/<int:user_id>/<int:session_id>/delete', methods=['POST'])
 def delete_session(user_id, session_id):
+    ''' Backend for deleting a session '''
 
     #conn = get_db_connection()
     #cursor = conn.cursor()
@@ -162,9 +156,9 @@ def delete_session(user_id, session_id):
 
     print(f'DELETED SESSION WITH ID: {session_id}')
     return redirect(url_for('user_homepage', user_id=user_id))
-################################################################
 
-################################################################
+
+
 @socketio.on('connect')
 def handle_connect():
 
@@ -180,7 +174,7 @@ def handle_message(msg):
 
     print('Message: ' + msg)
     emit('response', {'data': 'Message received'})
-################################################################
+
 
 if __name__ == "__main__":
     socketio.run(app, host='0.0.0.0', port=5001, debug=True)
