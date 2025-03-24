@@ -81,7 +81,7 @@ def signup():
 
 @app.route('/login/<int:user_id>/')
 def user_homepage(user_id):
-''' Backend for user homepage '''
+    ''' Backend for user homepage '''
 
     db = DatabaseAPI()  # SQLite file database
     if db.connect():
@@ -99,12 +99,7 @@ def user_homepage(user_id):
         db.disconnect()
     user_keys = ['userID','username','watchID', 'password', 'role', 'weight'] 
     user_info = db.cast_tuple_to_dict(user_info,user_keys)
-<<<<<<< HEAD
     session_keys = ['sessionID','start_time' , 'end_time', 'session_length', 'distance', 'steps', 'calories'] 
-=======
-    #session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
-    session_keys = ['sessionID','userID','watchID','start_time','end_time', 'session_length', 'distance', 'steps', 'calories']
->>>>>>> origin/main
     sessions = [db.cast_tuple_to_dict(tup, session_keys) for tup in sessions]
 
     return render_template('user_homepage.html', user_id=user_id, user_info=user_info, session_count=session_count, sessions=sessions)
