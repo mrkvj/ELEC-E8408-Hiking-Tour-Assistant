@@ -1,4 +1,11 @@
 #include <config.hpp>
+/*
+Initialize the program, synchronize with RPi, call CreateSession() if side button is pressed.
+Reads the data from BL, if RPi sends certain characters.
+Uses timeouts to ensure that it does not get stuck into synchronization loop.
+Appends the data to the file, ensuring that no previous data is deleted.
+
+*/
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -7,7 +14,7 @@
 BluetoothSerial SerialBT;
 String userID;
 string watchID = "TWATCH-TTGO"; //acts as a "Serialnumber"
-String userName = "unnamed";
+String userName = "unnamed"; //default username if not given by RPi
 #define BTN_X_MIN 80
 #define BTN_X_MAX 160
 #define BTN_Y_MAX 200
@@ -26,8 +33,6 @@ volatile bool irqBMA = false;
 volatile bool irqButton = false;
 bool sessionSent = false;
 bool sessionStored = false;
-
-
 
 bool setDateTimeFormBLE(const char *str)
 {
@@ -82,8 +87,6 @@ bool setDateTimeFormBLE(const char *str)
     return true;
 }
 
-
-
 void setup() {
     Serial.begin(115200);
     SerialBT.begin("TTGO-Watch");
@@ -95,13 +98,7 @@ void setup() {
     tft->setTextFont(2);
     tft->setTextColor(TFT_WHITE, TFT_BLACK);
     tft->drawString("testilaitos", 62, 30);
-    
     rtc = ttgo->rtc;
-
-    
-    
-
-
     //Side button
     pinMode(AXP202_INT, INPUT_PULLUP);
     attachInterrupt(AXP202_INT, [] {
@@ -120,14 +117,6 @@ void setup() {
      }
      
 }
-
-
-
-
-
-
-
-
 
 double readMassFromBL()  //Read the user name from the bluetooth serial stream
 {
@@ -189,7 +178,6 @@ void sendSessionBT()
     // Sending session id
     sendDataBT(LITTLEFS, "/data.txt");
     return;
-    
 }
 
 String readTimeFromBL()  //Read the user name from the bluetooth serial stream
@@ -199,9 +187,9 @@ String readTimeFromBL()  //Read the user name from the bluetooth serial stream
     int index = 0;
 
     tft->fillScreen(TFT_BROWN);
-    unsigned long startTime = millis();  // Record the start time
+    unsigned long startTime = millis();  
     const unsigned long timeout = 5000; 
-    while (millis() - startTime < timeout) 
+    while (millis() - startTime < timeout)
     {
         while (SerialBT.available()) 
         {
@@ -209,22 +197,21 @@ String readTimeFromBL()  //Read the user name from the bluetooth serial stream
 
             if (incomingChar == ';')  
             {
-                time[index] = '\0';  // Null-terminate the string
-                return String(time);  // Convert char array to String
+                time[index] = '\0';  
+                return String(time);  
             }
 
-            if (index < maxLength - 1)  // Prevent buffer overflow
+            if (index < maxLength - 1)  
             {
                 time[index++] = incomingChar;
             }
             startTime = millis();
         }
 
-        delay(5);  // Reduced delay for better responsiveness
+        delay(5);  
     }
     return "";
 }
-
 
 String readUserFromBL()  //Read the user name from the bluetooth serial stream
 {
@@ -259,7 +246,6 @@ String readUserFromBL()  //Read the user name from the bluetooth serial stream
     return "";
 }
 
-
 void saveStepsToFile(uint32_t step_count)
 {
     char buffer[10];
@@ -279,8 +265,6 @@ void saveDistanceToFile(float distance)
 void deleteSession()
 {
     deleteFile(LITTLEFS, "/data.txt");
-
-    
 }
 
 void saveUserToFile(String user, string mass) {
@@ -446,13 +430,14 @@ void loop()
     }
     case 3:
     {
-        
-        /* Hiking session ongoing */
+        /* Creates a session and saves it to the data.txt */
+        // last to be printed has to be formatted data;\n
+        //user;weight;steps;distance(m);duration(min);watchID;calories;stoppingTime;\n
         Session newSession = CreateSession();
-        
         newSession.setUser(userName);
         newSession.setMass(mass);
         newSession.setCalories();
+        
         saveUserToFile(newSession.getUser(),newSession.getMass());
         saveIdToFile(newSession.getstartingTime()); 
         saveStepsToFile(newSession.getSteps()); 
@@ -461,22 +446,13 @@ void loop()
         saveWatchIdToFileStr(watchID);
         saveCaloriesToFile(newSession.getCalories());
         saveStopSessionStrToFile(newSession.getstoppingTime());
+        
         sessionStored = true;
-        // last to be printed has to be formatted data;\n
-        //user;weight;steps;distance(m);duration(min);watchID;calories;stoppingTime;\n
-       
-            
     }   
-      
-        
-        
-
-        
-    
     case 4:
     {
-        //Save hiking session data
-        delay(1000);
+        /*  */
+        delay(100);
         state = 1;  
         break;
     }
