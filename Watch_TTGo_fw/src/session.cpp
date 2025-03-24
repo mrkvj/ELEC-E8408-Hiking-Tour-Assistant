@@ -1,9 +1,6 @@
 #include <config.hpp>
 bool irq = false;
 bool sessionOn = true;
-
-
-
 BMA* sensor;
 #include <time.h>
 #define BTN_X_MIN 80
@@ -11,33 +8,20 @@ BMA* sensor;
 #define BTN_Y_MAX 200
 #define BTN_Y_MIN 160
 
-
-
-
-
-
-
 char days[128];
 char stopTime[128];
 Session CreateSession() {
+    /*Configures the BMA423 sensor, sets the start time of the session.*/
     ttgo = TTGOClass::getWatch();
     tft = ttgo->tft;
     Session ThisSession;
     rtc = ttgo->rtc;
     sensor = ttgo->bma;
-    
-    
-    
     tft->fillScreen(TFT_BLACK);
-    
     RTC_Date t = rtc->getDateTime();
     ThisSession.setStartTime(t.hour,t.minute,t.second);
-    
     snprintf(days, sizeof(days), "%s", rtc->formatDateTime(5));
-    
     ThisSession.setStartingtime(days);
-    
-    
     tft->setCursor(45, 90);
     
     // Accel parameter structure
@@ -101,7 +85,6 @@ Session CreateSession() {
         irq = 1;
     }, RISING); 
 
-   
     sensor->enableFeature(BMA423_STEP_CNTR, true);
     sensor->resetStepCounter();
     sensor->enableStepCountInterrupt();
@@ -110,11 +93,6 @@ Session CreateSession() {
     tft->setTextFont(4);
     tft->setTextColor(TFT_WHITE, TFT_BLACK);
 
-   
-
-    
-    
-    
     int16_t x, y;
     tft->drawString("Press red button to stop session", 20,20,2);
     tft->fillRect(BTN_X_MIN,BTN_Y_MIN,80,40, TFT_RED);
@@ -126,20 +104,10 @@ Session CreateSession() {
                     RTC_Date y = rtc->getDateTime();
                     ThisSession.setStopTime(y.hour,y.minute,y.second);
                     snprintf(stopTime, sizeof(stopTime), "%s", rtc->formatDateTime(5));
-    
                     ThisSession.setStoppingtime(stopTime);
-
                     ThisSession.setDuration();
-                        
-                    
-    
-                    
-                    
-                    
-                    
                     return ThisSession;
-            }    
-            
+            }     
         if (irq) {
             irq = 0;
             bool  rlst;
@@ -148,40 +116,22 @@ Session CreateSession() {
                 // need to wait for it to return to true before continuing
                 rlst = sensor->readInterrupt();
             } 
-            
-            
             while (!rlst);
             tft->setTextFont(2);
             tft->setCursor(45,80);
             tft->setTextColor(TFT_WHITE, TFT_BLACK);
             tft->print("Distance (m): ");
-            
             tft->print(ThisSession.getDistance());
             // Check if it is a step interrupt
             if (sensor->isStepCounter()) {
                 // Get step data from register
                 uint32_t step = sensor->getCounter();
-                
                 tft->setCursor(45, 118);
                 tft->print("StepCount: ");
-                
-                
                 ThisSession.setSteps(step);
                 ThisSession.setDistance();
                 tft->print(ThisSession.getSteps());
-                
-                
-                
-        
-            
-                
             }
-
-            
         delay(5);    
-
-            
         }
-        
-
     }
