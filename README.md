@@ -1,5 +1,6 @@
 # ELEC-E8408-Hiking-Tour-Assistant
 The project consist of Raspberry 3b+ (RPi) and LilyGo TWATCH V2. Database and webUI is ran on RPi and LilyGoWatch gathers hiking session data, and sends it to the database via Bluetooth.
+
 OverView of the RPi software class diagram:
 ![RPi_class_diagram](https://github.com/user-attachments/assets/772aedd9-1a94-44bb-9a51-885a5ec99670)
 
