@@ -6,7 +6,7 @@ OverView of the RPi software class diagram:
 
 ## How to initialize Raspberry Pi support platform for Hiking Tour Asistant:
 1. Clone repository to Raspberry Pi.
-2. Run "run_script.sh to initialize bluetooth receiver and local webserver in the backround.
+2. Run "run_script.sh" to initialize bluetooth receiver and local webserver in the backround.
 ```
 sh run_script.sh
 ```
